@@ -1,72 +1,126 @@
-use logos::{Logos, Lexer as LogosLexer};
+use logos::{Lexer as LogosLexer, Logos};
 
 mod helpers;
 use helpers::unescape;
-
 
 #[derive(Logos, Debug, PartialEq)]
 #[logos(skip r"[ \t\n\f]+")]
 pub enum Token {
     // Keywords
-    #[token("and")] And,
-    #[token("break")] Break,
-    #[token("do")] Do,
-    #[token("else")] Else,
-    #[token("elseif")] ElseIf,
-    #[token("end")] End,
-    #[token("false")] False,
-    #[token("for")] For,
-    #[token("function")] Function,
-    #[token("goto")] Goto,
-    #[token("if")] If,
-    #[token("in")] In,
-    #[token("local")] Local,
-    #[token("nil")] Nil,
-    #[token("not")] Not,
-    #[token("or")] Or,
-    #[token("repeat")] Repeat,
-    #[token("return")] Return,
-    #[token("then")] Then,
-    #[token("true")] True,
-    #[token("until")] Until,
-    #[token("while")] While,
+    #[token("and")]
+    And,
+    #[token("break")]
+    Break,
+    #[token("do")]
+    Do,
+    #[token("else")]
+    Else,
+    #[token("elseif")]
+    ElseIf,
+    #[token("end")]
+    End,
+    #[token("false")]
+    False,
+    #[token("for")]
+    For,
+    #[token("function")]
+    Function,
+    #[token("goto")]
+    Goto,
+    #[token("if")]
+    If,
+    #[token("in")]
+    In,
+    #[token("local")]
+    Local,
+    #[token("nil")]
+    Nil,
+    #[token("not")]
+    Not,
+    #[token("or")]
+    Or,
+    #[token("repeat")]
+    Repeat,
+    #[token("return")]
+    Return,
+    #[token("then")]
+    Then,
+    #[token("true")]
+    True,
+    #[token("until")]
+    Until,
+    #[token("while")]
+    While,
 
     // Multi-character operators
-    #[token("...")] VarArgs,
-    #[token("..")] Concat,
-    #[token("::")] LabelDelim,
-    #[token("==")] Equal,
-    #[token("~=")] NotEqual,
-    #[token("<=")] LessEqual,
-    #[token(">=")] GreaterEqual,
-    #[token("<<")] ShiftLeft,
-    #[token(">>")] ShiftRight,
-    #[token("//")] FloorDivide,
+    #[token("...")]
+    VarArgs,
+    #[token("..")]
+    Concat,
+    #[token("::")]
+    LabelDelim,
+    #[token("==")]
+    Equal,
+    #[token("~=")]
+    NotEqual,
+    #[token("<=")]
+    LessEqual,
+    #[token(">=")]
+    GreaterEqual,
+    #[token("<<")]
+    ShiftLeft,
+    #[token(">>")]
+    ShiftRight,
+    #[token("//")]
+    FloorDivide,
 
     // Single character operators
-    #[token("=")] Assign,
-    #[token("~")] BitXor,
-    #[token("&")] BitAnd,
-    #[token("|")] BitOr,
-    #[token(">")] GreaterThan,
-    #[token("<")] LessThan,
-    #[token("+")] Plus,
-    #[token("-")] Minus,
-    #[token("*")] Multiply,
-    #[token("/")] Divide,
-    #[token("%")] Modulus,
-    #[token("^")] Power,
-    #[token("#")] Length,
-    #[token(":")] Colon,
-    #[token(";")] Semicolon,
-    #[token(",")] Comma,
-    #[token(".")] Dot,
-    #[token("(")] LeftParen,
-    #[token(")")] RightParen,
-    #[token("{")] LeftBrace,
-    #[token("}")] RightBrace,
-    #[token("[")] LeftBracket,
-    #[token("]")] RightBracket,
+    #[token("=")]
+    Assign,
+    #[token("~")]
+    BitXor,
+    #[token("&")]
+    BitAnd,
+    #[token("|")]
+    BitOr,
+    #[token(">")]
+    GreaterThan,
+    #[token("<")]
+    LessThan,
+    #[token("+")]
+    Plus,
+    #[token("-")]
+    Minus,
+    #[token("*")]
+    Multiply,
+    #[token("/")]
+    Divide,
+    #[token("%")]
+    Modulus,
+    #[token("^")]
+    Power,
+    #[token("#")]
+    Length,
+    #[token(":")]
+    Colon,
+    #[token(";")]
+    Semicolon,
+    #[token(",")]
+    Comma,
+    #[token(".")]
+    Dot,
+    #[token("(")]
+    LeftParen,
+    #[token(")")]
+    RightParen,
+    #[token("{")]
+    LeftBrace,
+    #[token("}")]
+    RightBrace,
+    #[token("[")]
+    LeftBracket,
+    #[token("]")]
+    RightBracket,
 
     // Identifiers
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", |lex| lex.slice().to_string())]

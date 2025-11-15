@@ -92,10 +92,22 @@ mod tests {
 
         assert_eq!(tokens.contains(&Token::Identifier("Foo".to_string())), true);
         assert_eq!(tokens.contains(&Token::Identifier("Bar".to_string())), true);
-        assert_eq!(tokens.contains(&Token::Identifier("_Foo".to_string())), true);
-        assert_eq!(tokens.contains(&Token::Identifier("_Bar".to_string())), true);
-        assert_eq!(tokens.contains(&Token::Identifier("_123".to_string())), true);
-        assert_eq!(tokens.contains(&Token::Identifier("abc123".to_string())), true);
+        assert_eq!(
+            tokens.contains(&Token::Identifier("_Foo".to_string())),
+            true
+        );
+        assert_eq!(
+            tokens.contains(&Token::Identifier("_Bar".to_string())),
+            true
+        );
+        assert_eq!(
+            tokens.contains(&Token::Identifier("_123".to_string())),
+            true
+        );
+        assert_eq!(
+            tokens.contains(&Token::Identifier("abc123".to_string())),
+            true
+        );
     }
 
     #[test]
@@ -113,7 +125,6 @@ mod tests {
         assert_eq!(tokens.contains(&Token::Number(3.14)), true);
         assert_eq!(tokens.contains(&Token::Number(0.001)), true);
         assert_eq!(tokens.contains(&Token::Number(1e10)), true);
-    
     }
 
     #[test]
@@ -123,10 +134,24 @@ mod tests {
 
         let tokens: Vec<_> = lexer.collect();
 
-        assert_eq!(tokens.contains(&Token::StringLiteral("Hello, World!".to_string())), true);
-        assert_eq!(tokens.contains(&Token::StringLiteral("Single quoted string".to_string())), true);
-        assert_eq!(tokens.contains(&Token::StringLiteral("String with escape \n characters".to_string())), true);
-        assert_eq!(tokens.contains(&Token::StringLiteral("long".to_string())), true);
+        assert_eq!(
+            tokens.contains(&Token::StringLiteral("Hello, World!".to_string())),
+            true
+        );
+        assert_eq!(
+            tokens.contains(&Token::StringLiteral("Single quoted string".to_string())),
+            true
+        );
+        assert_eq!(
+            tokens.contains(&Token::StringLiteral(
+                "String with escape \n characters".to_string()
+            )),
+            true
+        );
+        assert_eq!(
+            tokens.contains(&Token::StringLiteral("long".to_string())),
+            true
+        );
     }
 
     #[test]

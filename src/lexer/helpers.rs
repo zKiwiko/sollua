@@ -1,4 +1,3 @@
-
 pub fn unescape(inner: &str) -> String {
     let mut out = String::with_capacity(inner.len());
     let mut chars = inner.chars();
