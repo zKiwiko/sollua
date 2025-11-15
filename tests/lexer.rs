@@ -16,6 +16,26 @@ mod tests {
     }
 
     #[test]
+    fn test_attribute() {
+        let source = "local <const> x = 42;";
+        let mut lexer = Lexer::new(source);
+
+        let tokens: Vec<_> = lexer.collect();
+
+        println!("{:?}", tokens);
+
+        assert_eq!(
+            tokens.contains(&Token::Attribute("const".to_string())),
+            true
+        );
+        assert_eq!(tokens.contains(&Token::Local), true);
+        assert_eq!(tokens.contains(&Token::Identifier("x".to_string())), true);
+        assert_eq!(tokens.contains(&Token::Assign), true);
+        assert_eq!(tokens.contains(&Token::Integer(42)), true);
+        assert_eq!(tokens.contains(&Token::Semicolon), true);
+    }
+
+    #[test]
     fn test_keywords() {
         let source = "and break do else elseif end false for function goto if in local nil not or repeat return then true until while";
         let mut lexer = Lexer::new(source);
