@@ -77,15 +77,15 @@ mod statements;
 use crate::ast::*;
 use crate::lexer::Token;
 
-pub struct Parser<'a> {
-    tokens: std::iter::Peekable<std::slice::Iter<'a, Token>>,
-    _source: &'a str,
+pub struct Parser<'src> {
+    tokens: std::iter::Peekable<std::slice::Iter<'src, Token<'src>>>,
+    _source: &'src str,
     pub errors: Vec<String>,
-    pub ast: Vec<ASTNode>,
+    pub ast: Vec<ASTNode<'src>>,
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(source: &'a str, tokens: &'a [Token]) -> Self {
+impl<'src> Parser<'src> {
+    pub fn new(source: &'src str, tokens: &'src [Token<'src>]) -> Self {
         let mut parser = Parser {
             tokens: tokens.iter().peekable(),
             _source: source,
@@ -96,7 +96,7 @@ impl<'a> Parser<'a> {
         parser
     }
 
-    pub fn parse(&mut self) -> &Vec<ASTNode> {
+    pub fn parse(&mut self) -> &Vec<ASTNode<'src>> {
         while let Some(token) = self.peek().cloned() {
             match token {
                 Token::Eof => {
@@ -127,13 +127,15 @@ impl<'a> Parser<'a> {
                 }
                 Token::Identifier(name) => {
                     self.next();
-                    if let Some(stmt) = self.parse_identifier_statement(name.clone()) {
+                    if let Some(stmt) = self.parse_identifier_statement(name) {
                         self.ast.push(ASTNode::Statement(stmt));
                     }
                 }
                 Token::If => {
                     self.next();
-                    self.parse_if_statement();
+                    if let Some(stmt) = self.parse_if_statement() {
+                        self.ast.push(ASTNode::Statement(stmt));
+                    }
                 }
                 Token::While => {
                     self.next();
@@ -166,9 +168,8 @@ impl<'a> Parser<'a> {
                     }
                 }
                 Token::Label(name) => {
-                    let label = name.clone();
                     self.next();
-                    let stmt = self.parse_label_statement(label);
+                    let stmt = self.parse_label_statement(name);
                     self.ast.push(ASTNode::Statement(stmt));
                 }
                 Token::Semicolon => {

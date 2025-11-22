@@ -2,16 +2,16 @@ use crate::ast::*;
 use crate::lexer::Token;
 use crate::parser::Parser;
 
-impl<'a> Parser<'a> {
-    pub fn parse_label_statement(&mut self, label: String) -> StatementNode {
+impl<'src> Parser<'src> {
+    pub fn parse_label_statement(&mut self, label: &'src str) -> StatementNode<'src> {
         // Optional semicolon
         let _ = self.check_next(Token::Semicolon);
         StatementNode::Label(label)
     }
 
-    pub fn parse_goto_statement(&mut self) -> Option<StatementNode> {
+    pub fn parse_goto_statement(&mut self) -> Option<StatementNode<'src>> {
         let label = if let Some(&Token::Identifier(ref name)) = self.next() {
-            name.clone()
+            *name
         } else {
             self.errors
                 .push("Expected label name after 'goto' keyword".into());
@@ -24,7 +24,7 @@ impl<'a> Parser<'a> {
         Some(StatementNode::Goto(label))
     }
 
-    pub fn parse_do_block(&mut self) -> Option<StatementNode> {
+    pub fn parse_do_block(&mut self) -> Option<StatementNode<'src>> {
         let body = self.parse_block_until(&[Token::End]);
 
         if !self.check_next(Token::End) {
@@ -36,7 +36,7 @@ impl<'a> Parser<'a> {
         Some(StatementNode::DoBlock { body })
     }
 
-    pub fn parse_repeat_statement(&mut self) -> Option<StatementNode> {
+    pub fn parse_repeat_statement(&mut self) -> Option<StatementNode<'src>> {
         let body = self.parse_block_until(&[Token::Until]);
 
         if !self.check_next(Token::Until) {
@@ -56,10 +56,10 @@ impl<'a> Parser<'a> {
         Some(StatementNode::Repeat { body, condition })
     }
 
-    pub fn parse_for_statement(&mut self) -> Option<StatementNode> {
+    pub fn parse_for_statement(&mut self) -> Option<StatementNode<'src>> {
         // Parse first variable name
         let first_var = if let Some(&Token::Identifier(ref name)) = self.next() {
-            name.clone()
+            *name
         } else {
             self.errors
                 .push("Expected variable name in 'for' statement".into());
@@ -76,7 +76,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_numeric_for(&mut self, var_name: String) -> Option<StatementNode> {
+    fn parse_numeric_for(&mut self, var_name: &'src str) -> Option<StatementNode<'src>> {
         // Parse start expression
         let start_expr = match self.parse_expression(1) {
             Some(expr) => expr,
@@ -143,12 +143,12 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_generic_for(&mut self, first_var: String) -> Option<StatementNode> {
+    fn parse_generic_for(&mut self, first_var: &'src str) -> Option<StatementNode<'src>> {
         // Collect all variable names: var1, var2, ...
         let mut variables = vec![first_var];
         while self.check_next(Token::Comma) {
             if let Some(&Token::Identifier(ref name)) = self.next() {
-                variables.push(name.clone());
+                variables.push(*name);
             } else {
                 self.errors.push("Expected variable name after ','".into());
                 return None;
@@ -188,7 +188,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub fn parse_while_statement(&mut self) -> Option<StatementNode> {
+    pub fn parse_while_statement(&mut self) -> Option<StatementNode<'src>> {
         let condition = match self.parse_expression(1) {
             Some(expr) => expr,
             None => {
@@ -213,18 +213,18 @@ impl<'a> Parser<'a> {
         Some(StatementNode::While { condition, body })
     }
 
-    pub fn parse_if_statement(&mut self) {
+    pub fn parse_if_statement(&mut self) -> Option<StatementNode<'src>> {
         let condition = match self.parse_expression(1) {
             Some(expr) => expr,
             None => {
                 self.errors.push("Expected expression after 'if'".into());
-                return;
+                return None;
             }
         };
 
         if !self.check_next(Token::Then) {
             self.errors.push("Expected 'then' after condition".into());
-            return;
+            return None;
         }
 
         let then_block = self.parse_block_until(&[Token::ElseIf, Token::Else, Token::End]);
@@ -238,13 +238,13 @@ impl<'a> Parser<'a> {
                 None => {
                     self.errors
                         .push("Expected expression after 'elseif'".into());
-                    return;
+                    return None;
                 }
             };
             if !self.check_next(Token::Then) {
                 self.errors
                     .push("Expected 'then' after 'elseif' condition".into());
-                return;
+                return None;
             }
             let elseif_body = self.parse_block_until(&[Token::ElseIf, Token::Else, Token::End]);
             else_block.push(ASTNode::Statement(StatementNode::If {
@@ -261,29 +261,28 @@ impl<'a> Parser<'a> {
         }
 
         if !self.check_next(Token::End) {
+            let peek_tok = self.peek().cloned();
             self.errors
-                .push("Expected 'end' to close 'if' statement".into());
-            return;
+                .push(format!("Expected 'end' to close 'if' statement, found {:?}", peek_tok));
+            return None;
         }
 
-        self.ast.push(ASTNode::Statement(StatementNode::If {
+        Some(StatementNode::If {
             condition,
             then_block,
             else_block,
-        }));
+        })
     }
 
     // Helper to parse statements until hitting one of the stop tokens
-    pub(super) fn parse_block_until(&mut self, stop_tokens: &[Token]) -> Vec<ASTNode> {
+    pub(super) fn parse_block_until(&mut self, stop_tokens: &[Token<'src>]) -> Vec<ASTNode<'src>> {
         let mut stmts = Vec::new();
         loop {
             let token = match self.peek() {
+                Some(t) if super::helpers::matches_any(t, stop_tokens) || matches!(t, Token::Eof) => break,
                 Some(t) => t.clone(),
                 None => break,
             };
-            if stop_tokens.contains(&token) || token == Token::Eof {
-                break;
-            }
 
             match token {
                 Token::Return => {
@@ -308,21 +307,21 @@ impl<'a> Parser<'a> {
                         stmts.push(ASTNode::Statement(stmt));
                     }
                 }
-                Token::Identifier(ref name) => {
+                Token::Identifier(name) => {
                     self.next();
-                    let ident = name.clone();
-                    if let Some(stmt) = self.parse_identifier_statement(ident) {
+                    if let Some(stmt) = self.parse_identifier_statement(name) {
                         stmts.push(ASTNode::Statement(stmt));
                     }
                 }
                 Token::If => {
                     self.next();
-                    self.parse_if_statement();
+                    if let Some(stmt) = self.parse_if_statement() {
+                        stmts.push(ASTNode::Statement(stmt));
+                    }
                 }
-                Token::Label(ref name) => {
-                    let label = name.clone();
+                Token::Label(name) => {
                     self.next();
-                    let stmt = self.parse_label_statement(label);
+                    let stmt = self.parse_label_statement(name);
                     stmts.push(ASTNode::Statement(stmt));
                 }
                 Token::Goto => {
@@ -339,11 +338,11 @@ impl<'a> Parser<'a> {
         stmts
     }
 
-    pub(super) fn parse_local_assignment(&mut self) -> Option<StatementNode> {
+    pub(super) fn parse_local_assignment(&mut self) -> Option<StatementNode<'src>> {
         let mut targets = Vec::new();
         loop {
             let var_name = match self.next() {
-                Some(Token::Identifier(name)) => ExpressionNode::Variable(name.clone()),
+                Some(Token::Identifier(name)) => ExpressionNode::Variable(name),
                 _ => {
                     self.errors
                         .push("Expected identifier in local declaration".into());
@@ -353,10 +352,10 @@ impl<'a> Parser<'a> {
 
             // Check for attribute: <const> or <close>
             let attribute = if let Some(Token::Attribute(attr)) = self.peek() {
-                if attr == "const" || attr == "close" {
-                    let attr_clone = attr.clone();
+                if attr == &"const" || attr == &"close" {
+                    let attr_val = *attr;
                     self.next();
-                    Some(attr_clone)
+                    Some(attr_val)
                 } else {
                     None
                 }
@@ -392,10 +391,10 @@ impl<'a> Parser<'a> {
         Some(StatementNode::LocalAssignment { targets, values })
     }
 
-    pub fn parse_function_decl(&mut self, is_local: bool) -> Option<StatementNode> {
+    pub fn parse_function_decl(&mut self, is_local: bool) -> Option<StatementNode<'src>> {
         // Expect function name
         let first_name = if let Some(&Token::Identifier(ref name)) = self.next() {
-            name.clone()
+            *name
         } else {
             self.errors
                 .push("Expected function name after 'function' keyword".to_string());
@@ -435,14 +434,14 @@ impl<'a> Parser<'a> {
         loop {
             if self.check_next(Token::Dot) {
                 if let Some(&Token::Identifier(ref name)) = self.next() {
-                    name_path.push(name.clone());
+                    name_path.push(*name);
                 } else {
                     self.errors.push("Expected identifier after '.'".into());
                     return None;
                 }
             } else if self.check_next(Token::Colon) {
                 if let Some(&Token::Identifier(ref name)) = self.next() {
-                    name_path.push(name.clone());
+                    name_path.push(*name);
                     is_method = true;
                     break;
                 } else {
@@ -465,7 +464,7 @@ impl<'a> Parser<'a> {
 
         // If method syntax, prepend 'self' to parameters
         if is_method {
-            parameters.insert(0, "self".to_string());
+            parameters.insert(0, "self");
         }
 
         if !self.check_next(Token::RightParen) {
@@ -484,19 +483,19 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_parameter_list(&mut self) -> Option<Vec<String>> {
+    fn parse_parameter_list(&mut self) -> Option<Vec<&'src str>> {
         let mut parameters = Vec::new();
         while let Some(token) = self.peek() {
             match token {
                 &Token::Identifier(ref param) => {
-                    parameters.push(param.clone());
+                    parameters.push(*param);
                     self.next();
                     if !self.check_next(Token::Comma) {
                         break;
                     }
                 }
                 &Token::VarArgs => {
-                    parameters.push("...".to_string());
+                    parameters.push("...");
                     self.next();
                     break; // varargs must be last
                 }
@@ -511,7 +510,7 @@ impl<'a> Parser<'a> {
         Some(parameters)
     }
 
-    pub(super) fn parse_identifier_statement(&mut self, first: String) -> Option<StatementNode> {
+    pub(super) fn parse_identifier_statement(&mut self, first: &'src str) -> Option<StatementNode<'src>> {
         // Try to parse as full expression with postfix (function call, indexing)
         let expr = self.parse_postfix(ExpressionNode::Variable(first))?;
 
@@ -552,18 +551,28 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub(super) fn parse_block(&mut self) -> Vec<ASTNode> {
+    pub(super) fn parse_block(&mut self) -> Vec<ASTNode<'src>> {
         let mut stmts = Vec::new();
         loop {
-            let token = match self.peek() {
-                Some(t) => t.clone(),
-                None => break,
-            };
-            match token {
-                Token::End => {
+            // Check for end or extract identifier first if needed
+            let token_kind = match self.peek() {
+                Some(Token::End) => {
                     self.next();
                     break;
                 }
+                Some(Token::Identifier(name)) => {
+                    let name_copy = *name;
+                    self.next();
+                    if let Some(stmt) = self.parse_identifier_statement(name_copy) {
+                        stmts.push(ASTNode::Statement(stmt));
+                    }
+                    continue;
+                }
+                Some(token) => token.clone(),
+                None => break,
+            };
+            
+            match token_kind {
                 Token::Return => {
                     self.next();
                     if let Some(vals) = self.parse_return_tail() {
@@ -586,13 +595,6 @@ impl<'a> Parser<'a> {
                         stmts.push(ASTNode::Statement(stmt));
                     }
                 }
-                Token::Identifier(ref name) => {
-                    self.next();
-                    let ident = name.clone();
-                    if let Some(stmt) = self.parse_identifier_statement(ident) {
-                        stmts.push(ASTNode::Statement(stmt));
-                    }
-                }
                 _ => {
                     self.next();
                 }
@@ -601,12 +603,12 @@ impl<'a> Parser<'a> {
         stmts
     }
 
-    pub(super) fn parse_return_statement(&mut self) -> Option<StatementNode> {
+    pub(super) fn parse_return_statement(&mut self) -> Option<StatementNode<'src>> {
         let values = self.parse_return_tail()?;
         Some(StatementNode::Return(values))
     }
 
-    pub(super) fn parse_return_tail(&mut self) -> Option<Vec<ExpressionNode>> {
+    pub(super) fn parse_return_tail(&mut self) -> Option<Vec<ExpressionNode<'src>>> {
         let mut values = Vec::new();
         if let Some(tok) = self.peek() {
             if matches!(tok, Token::End | Token::Semicolon) {

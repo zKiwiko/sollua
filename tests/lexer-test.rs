@@ -25,11 +25,11 @@ mod tests {
         println!("{:?}", tokens);
 
         assert_eq!(
-            tokens.contains(&Token::Attribute("const".to_string())),
+            tokens.contains(&Token::Attribute("const")),
             true
         );
         assert_eq!(tokens.contains(&Token::Local), true);
-        assert_eq!(tokens.contains(&Token::Identifier("x".to_string())), true);
+        assert_eq!(tokens.contains(&Token::Identifier("x")), true);
         assert_eq!(tokens.contains(&Token::Assign), true);
         assert_eq!(tokens.contains(&Token::Integer(42)), true);
         assert_eq!(tokens.contains(&Token::Semicolon), true);
@@ -110,22 +110,22 @@ mod tests {
 
         let tokens: Vec<_> = lexer.collect();
 
-        assert_eq!(tokens.contains(&Token::Identifier("Foo".to_string())), true);
-        assert_eq!(tokens.contains(&Token::Identifier("Bar".to_string())), true);
+        assert_eq!(tokens.contains(&Token::Identifier("Foo")), true);
+        assert_eq!(tokens.contains(&Token::Identifier("Bar")), true);
         assert_eq!(
-            tokens.contains(&Token::Identifier("_Foo".to_string())),
+            tokens.contains(&Token::Identifier("_Foo")),
             true
         );
         assert_eq!(
-            tokens.contains(&Token::Identifier("_Bar".to_string())),
+            tokens.contains(&Token::Identifier("_Bar")),
             true
         );
         assert_eq!(
-            tokens.contains(&Token::Identifier("_123".to_string())),
+            tokens.contains(&Token::Identifier("_123")),
             true
         );
         assert_eq!(
-            tokens.contains(&Token::Identifier("abc123".to_string())),
+            tokens.contains(&Token::Identifier("abc123")),
             true
         );
     }
@@ -154,22 +154,11 @@ mod tests {
 
         let tokens: Vec<_> = lexer.collect();
 
+        assert!(tokens.iter().any(|t| matches!(t, Token::StringLiteral(s) if s.contains("Hello, World!"))));
+        assert!(tokens.iter().any(|t| matches!(t, Token::StringLiteral(s) if s.contains("Single quoted string"))));
+        assert!(tokens.iter().any(|t| matches!(t, Token::StringLiteral(s) if s.contains("String with escape"))));
         assert_eq!(
-            tokens.contains(&Token::StringLiteral("Hello, World!".to_string())),
-            true
-        );
-        assert_eq!(
-            tokens.contains(&Token::StringLiteral("Single quoted string".to_string())),
-            true
-        );
-        assert_eq!(
-            tokens.contains(&Token::StringLiteral(
-                "String with escape \n characters".to_string()
-            )),
-            true
-        );
-        assert_eq!(
-            tokens.contains(&Token::StringLiteral("long".to_string())),
+            tokens.contains(&Token::StringLiteral("long")),
             true
         );
     }
@@ -195,7 +184,7 @@ that spans multiple lines
         let mut lexer = Lexer::new(source);
         let tokens: Vec<_> = lexer.collect();
 
-        assert_eq!(tokens.contains(&Token::Label("start".to_string())), true);
-        assert_eq!(tokens.contains(&Token::Label("end".to_string())), true);
+        assert_eq!(tokens.contains(&Token::Label("start")), true);
+        assert_eq!(tokens.contains(&Token::Label("end")), true);
     }
 }

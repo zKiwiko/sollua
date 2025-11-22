@@ -19,10 +19,13 @@ Sollua supports every feature present in Lua 5.4 **EXCEPT!!!** the following:
 
 ### Benchmarks against other crates
 
-| Crate      | 1000 Lines | 2500 Lines | 5000 Lines |
-| :--------- | :--------: | :--------: | :--------: |
-| **sollua** |    N/A     |    N/A     |    N/A     |
-| luaparse   |    N/A     |    N/A     |    N/A     |
-| luaparser  |    N/A     |    N/A     |    N/A     |
-| rslua      |    N/A     |    N/A     |    N/A     |
-| full_moon  |    N/A     |    N/A     |    N/A     |
+Each result is the average after running 5 tests.
+The parameters of each test can be found in the `benchmark` directory.
+
+| Crate      | 1000 Functions | 2500 Functions | 5000 Functions |
+| :--------- | :------------: | :------------: | :------------: |
+| **sollua** |    12.8 ms     |    31.6 ms     |    49.6 ms     |
+| luaparse   |      N/A       |      N/A       |      N/A       |
+| luaparser  |      N/A       |      N/A       |      N/A       |
+| rslua      |      N/A       |      N/A       |      N/A       |
+| full_moon  |      N/A       |      N/A       |      N/A       |

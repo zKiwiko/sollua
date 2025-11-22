@@ -1,105 +1,105 @@
 use crate::lexer::Token;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum ASTNode {
-    Statement(StatementNode),
-    Expression(ExpressionNode),
+pub enum ASTNode<'src> {
+    Statement(StatementNode<'src>),
+    Expression(ExpressionNode<'src>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum StatementNode {
-    Block(Vec<ASTNode>),
-    Goto(String),
+pub enum StatementNode<'src> {
+    Block(Vec<ASTNode<'src>>),
+    Goto(&'src str),
     DoBlock {
-        body: Vec<ASTNode>,
+        body: Vec<ASTNode<'src>>,
     },
     LocalAssignment {
-        targets: Vec<(ExpressionNode, Option<String>)>,
-        values: Vec<ExpressionNode>,
+        targets: Vec<(ExpressionNode<'src>, Option<&'src str>)>,
+        values: Vec<ExpressionNode<'src>>,
     },
     Assignment {
-        targets: Vec<ExpressionNode>,
-        values: Vec<ExpressionNode>,
+        targets: Vec<ExpressionNode<'src>>,
+        values: Vec<ExpressionNode<'src>>,
     },
-    Label(String),
+    Label(&'src str),
     LocalFunctionDeclaration {
-        name: String,
-        parameters: Vec<String>,
-        body: Box<ASTNode>,
+        name: &'src str,
+        parameters: Vec<&'src str>,
+        body: Box<ASTNode<'src>>,
     },
     FunctionDeclaration {
-        name_path: Vec<String>,
+        name_path: Vec<&'src str>,
         is_method: bool,
-        parameters: Vec<String>,
-        body: Box<ASTNode>,
+        parameters: Vec<&'src str>,
+        body: Box<ASTNode<'src>>,
     },
     If {
-        condition: ExpressionNode,
-        then_block: Vec<ASTNode>,
-        else_block: Vec<ASTNode>,
+        condition: ExpressionNode<'src>,
+        then_block: Vec<ASTNode<'src>>,
+        else_block: Vec<ASTNode<'src>>,
     },
     While {
-        condition: ExpressionNode,
-        body: Vec<ASTNode>,
+        condition: ExpressionNode<'src>,
+        body: Vec<ASTNode<'src>>,
     },
     Repeat {
-        body: Vec<ASTNode>,
-        condition: ExpressionNode,
+        body: Vec<ASTNode<'src>>,
+        condition: ExpressionNode<'src>,
     },
     ForNumeric {
-        variable: String,
-        start: ExpressionNode,
-        end: ExpressionNode,
-        step: Option<ExpressionNode>,
-        body: Vec<ASTNode>,
+        variable: &'src str,
+        start: ExpressionNode<'src>,
+        end: ExpressionNode<'src>,
+        step: Option<ExpressionNode<'src>>,
+        body: Vec<ASTNode<'src>>,
     },
     ForGeneric {
-        variables: Vec<String>,
-        expressions: Vec<ExpressionNode>,
-        body: Vec<ASTNode>,
+        variables: Vec<&'src str>,
+        expressions: Vec<ExpressionNode<'src>>,
+        body: Vec<ASTNode<'src>>,
     },
-    Return(Vec<ExpressionNode>),
+    Return(Vec<ExpressionNode<'src>>),
     Break,
-    ExpressionStatement(ExpressionNode),
+    ExpressionStatement(ExpressionNode<'src>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum ExpressionNode {
-    Literal(LiteralNode),
-    Variable(String),
+pub enum ExpressionNode<'src> {
+    Literal(LiteralNode<'src>),
+    Variable(&'src str),
 
     BinaryOp {
-        left: Box<ExpressionNode>,
-        operator: Token,
-        right: Box<ExpressionNode>,
+        left: Box<ExpressionNode<'src>>,
+        operator: Token<'src>,
+        right: Box<ExpressionNode<'src>>,
     },
     UnaryOp {
-        operator: Token,
-        operand: Box<ExpressionNode>,
+        operator: Token<'src>,
+        operand: Box<ExpressionNode<'src>>,
     },
     FunctionCall {
-        function: Box<ExpressionNode>,
-        method: Option<String>,
-        arguments: Vec<ExpressionNode>,
+        function: Box<ExpressionNode<'src>>,
+        method: Option<&'src str>,
+        arguments: Vec<ExpressionNode<'src>>,
     },
     TableConstructor {
-        entries: Vec<(Option<ExpressionNode>, ExpressionNode)>,
+        entries: Vec<(Option<ExpressionNode<'src>>, ExpressionNode<'src>)>,
     },
     Index {
-        table: Box<ExpressionNode>,
-        index: Box<ExpressionNode>,
+        table: Box<ExpressionNode<'src>>,
+        index: Box<ExpressionNode<'src>>,
     },
     AnonymousFunction {
-        parameters: Vec<String>,
-        body: Box<ASTNode>,
+        parameters: Vec<&'src str>,
+        body: Box<ASTNode<'src>>,
     },
     VarArg,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum LiteralNode {
+pub enum LiteralNode<'src> {
     Number(f64),
-    String(String),
+    String(&'src str),
     Boolean(bool),
     Nil,
 }

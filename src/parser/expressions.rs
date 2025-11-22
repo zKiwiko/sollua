@@ -2,9 +2,9 @@ use crate::ast::*;
 use crate::lexer::Token;
 use crate::parser::Parser;
 
-impl<'a> Parser<'a> {
+impl<'src> Parser<'src> {
     #[inline(always)]
-    pub(super) fn parse_expression(&mut self, min_prec: u8) -> Option<ExpressionNode> {
+    pub(super) fn parse_expression(&mut self, min_prec: u8) -> Option<ExpressionNode<'src>> {
         let mut left = self.parse_unary()?;
         loop {
             let op = match self.peek() {
@@ -29,7 +29,7 @@ impl<'a> Parser<'a> {
     }
 
     #[inline(always)]
-    fn parse_unary(&mut self) -> Option<ExpressionNode> {
+    fn parse_unary(&mut self) -> Option<ExpressionNode<'src>> {
         if let Some(tok) = self.peek() {
             if matches!(tok, Token::Minus | Token::Not | Token::Length) {
                 let op = tok.clone();
@@ -45,12 +45,12 @@ impl<'a> Parser<'a> {
     }
 
     #[inline(always)]
-    fn parse_primary(&mut self) -> Option<ExpressionNode> {
+    fn parse_primary(&mut self) -> Option<ExpressionNode<'src>> {
         let base = match self.next()? {
-            Token::Identifier(name) => ExpressionNode::Variable(name.clone()),
+            Token::Identifier(name) => ExpressionNode::Variable(name),
             Token::Integer(v) => ExpressionNode::Literal(LiteralNode::Number(*v as f64)),
             Token::Number(f) => ExpressionNode::Literal(LiteralNode::Number(*f)),
-            Token::StringLiteral(s) => ExpressionNode::Literal(LiteralNode::String(s.clone())),
+            Token::StringLiteral(s) => ExpressionNode::Literal(LiteralNode::String(s)),
             Token::True => ExpressionNode::Literal(LiteralNode::Boolean(true)),
             Token::False => ExpressionNode::Literal(LiteralNode::Boolean(false)),
             Token::Nil => ExpressionNode::Literal(LiteralNode::Nil),
@@ -73,9 +73,9 @@ impl<'a> Parser<'a> {
     }
 
     #[inline(always)]
-    pub(super) fn parse_postfix_expression(&mut self) -> Option<ExpressionNode> {
+    pub(super) fn parse_postfix_expression(&mut self) -> Option<ExpressionNode<'src>> {
         let base = match self.next()? {
-            Token::Identifier(name) => ExpressionNode::Variable(name.clone()),
+            Token::Identifier(name) => ExpressionNode::Variable(name),
             Token::LeftParen => {
                 let expr = self.parse_expression(1)?;
                 if !self.check_next(Token::RightParen) {
@@ -92,7 +92,7 @@ impl<'a> Parser<'a> {
     }
 
     #[inline(always)]
-    pub(super) fn parse_postfix(&mut self, mut base: ExpressionNode) -> Option<ExpressionNode> {
+    pub(super) fn parse_postfix(&mut self, mut base: ExpressionNode<'src>) -> Option<ExpressionNode<'src>> {
         loop {
             match self.peek()? {
                 Token::LeftParen => {
@@ -117,7 +117,7 @@ impl<'a> Parser<'a> {
                     // Method call: obj:method(args)
                     self.next();
                     let method = if let Some(Token::Identifier(name)) = self.next() {
-                        name.clone()
+                        *name
                     } else {
                         self.errors.push("Expected method name after ':'".into());
                         return None;
@@ -137,11 +137,11 @@ impl<'a> Parser<'a> {
                         args
                     } else if matches!(self.peek(), Some(Token::LeftBrace)) {
                         // Table constructor as argument
-                        self.next(); // Consume {
+                        self.next(); // consume {
                         vec![self.parse_table_constructor()?]
                     } else if let Some(Token::StringLiteral(s)) = self.peek() {
                         // String literal as argument
-                        let s = s.clone();
+                        let s = *s;
                         self.next();
                         vec![ExpressionNode::Literal(LiteralNode::String(s))]
                     } else {
@@ -158,7 +158,7 @@ impl<'a> Parser<'a> {
                 }
                 Token::LeftBrace => {
                     // Table constructor as function argument: func{...}
-                    self.next(); // Consume {
+                    self.next(); // consume {
                     let table = self.parse_table_constructor()?;
                     base = ExpressionNode::FunctionCall {
                         function: Box::new(base),
@@ -166,16 +166,15 @@ impl<'a> Parser<'a> {
                         arguments: vec![table],
                     };
                 }
-                Token::StringLiteral(_) => {
+                Token::StringLiteral(s) => {
                     // String literal as function argument: func"..."
-                    if let Some(Token::StringLiteral(s)) = self.next() {
-                        let s = s.clone();
-                        base = ExpressionNode::FunctionCall {
-                            function: Box::new(base),
-                            method: None,
-                            arguments: vec![ExpressionNode::Literal(LiteralNode::String(s))],
-                        };
-                    }
+                    let s = *s;
+                    self.next();
+                    base = ExpressionNode::FunctionCall {
+                        function: Box::new(base),
+                        method: None,
+                        arguments: vec![ExpressionNode::Literal(LiteralNode::String(s))],
+                    };
                 }
                 Token::LeftBracket => {
                     // Index with brackets: t[key]
@@ -194,7 +193,7 @@ impl<'a> Parser<'a> {
                     // Index with dot: t.key
                     self.next();
                     if let Some(Token::Identifier(key)) = self.next() {
-                        let key_expr = ExpressionNode::Literal(LiteralNode::String(key.clone()));
+                        let key_expr = ExpressionNode::Literal(LiteralNode::String(key));
                         base = ExpressionNode::Index {
                             table: Box::new(base),
                             index: Box::new(key_expr),
@@ -210,7 +209,7 @@ impl<'a> Parser<'a> {
         Some(base)
     }
     #[inline(always)]
-    fn parse_table_constructor(&mut self) -> Option<ExpressionNode> {
+    fn parse_table_constructor(&mut self) -> Option<ExpressionNode<'src>> {
         let mut entries = Vec::new();
         loop {
             match self.peek()? {
@@ -263,7 +262,7 @@ impl<'a> Parser<'a> {
     }
 
     #[inline(always)]
-    fn parse_anonymous_function(&mut self) -> Option<ExpressionNode> {
+    fn parse_anonymous_function(&mut self) -> Option<ExpressionNode<'src>> {
         // Expect '('
         if !self.check_next(Token::LeftParen) {
             self.errors
@@ -276,14 +275,14 @@ impl<'a> Parser<'a> {
         while let Some(token) = self.peek() {
             match token {
                 &Token::Identifier(ref param) => {
-                    parameters.push(param.clone());
+                    parameters.push(*param);
                     self.next();
                     if !self.check_next(Token::Comma) {
                         break;
                     }
                 }
                 &Token::VarArgs => {
-                    parameters.push("...".to_string());
+                    parameters.push("...");
                     self.next();
                     break;
                 }

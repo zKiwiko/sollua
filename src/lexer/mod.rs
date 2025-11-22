@@ -1,11 +1,10 @@
 use logos::{Lexer as LogosLexer, Logos};
 
 mod helpers;
-use helpers::unescape;
 
 #[derive(Logos, Debug, PartialEq, Clone)]
 #[logos(skip r"[ \t\n\f]+")]
-pub enum Token {
+pub enum Token<'src> {
     // Keywords
     #[token("and")]
     And,
@@ -123,18 +122,18 @@ pub enum Token {
     RightBracket,
 
     #[regex(r"<[a-zA-Z_][a-zA-Z0-9_]*>", |lex| {
-        lex.slice()[1..lex.slice().len()-1].to_string()
+        &lex.slice()[1..lex.slice().len()-1]
     })]
-    Attribute(String),
+    Attribute(&'src str),
 
     #[regex(r"::[a-zA-Z_][a-zA-Z0-9_]*::", |lex| {
-        lex.slice()[2..lex.slice().len()-2].to_string()
+        &lex.slice()[2..lex.slice().len()-2]
     })]
-    Label(String),
+    Label(&'src str),
 
     // Identifiers
-    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", |lex| lex.slice().to_string())]
-    Identifier(String),
+    #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", |lex| lex.slice())]
+    Identifier(&'src str),
 
     // Floats
     #[regex(
@@ -158,19 +157,15 @@ pub enum Token {
     // Strings
     #[regex(r"\[\[([^\]]|\][^\]])*\]\]", |lex| {
         let s = lex.slice();
-        Some(s[2..s.len()-2].to_string())
+        Some(&s[2..s.len()-2])
     })]
     #[regex(r#""([^"\\]|\\.)*""#, |lex| {
-        let s = lex.slice();
-        if s.len() < 2 { return None }
-        Some(unescape(&s[1..s.len()-1]))
+        lex.slice()
     })]
     #[regex(r"'([^'\\]|\\.)*'", |lex| {
-        let s = lex.slice();
-        if s.len() < 2 { return None }
-        Some(unescape(&s[1..s.len()-1]))
+        lex.slice()
     })]
-    StringLiteral(String),
+    StringLiteral(&'src str),
 
     // Comments
     #[regex(r"--[^\n]*", logos::skip)]
@@ -183,7 +178,7 @@ pub enum Token {
 }
 
 pub struct Lexer<'source> {
-    tokenizer: LogosLexer<'source, Token>,
+    tokenizer: LogosLexer<'source, Token<'source>>,
 }
 
 impl<'source> Lexer<'source> {
@@ -193,8 +188,9 @@ impl<'source> Lexer<'source> {
         }
     }
 
-    pub fn collect(&mut self) -> Vec<Token> {
-        let mut tokens: Vec<Token> = self.tokenizer.by_ref().filter_map(|res| res.ok()).collect();
+    pub fn collect(&mut self) -> Vec<Token<'source>> {
+        let mut tokens: Vec<Token<'source>> =
+            self.tokenizer.by_ref().filter_map(|res| res.ok()).collect();
         tokens.push(Token::Eof);
         tokens
     }
