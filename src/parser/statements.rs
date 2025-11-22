@@ -3,6 +3,27 @@ use crate::lexer::Token;
 use crate::parser::Parser;
 
 impl<'a> Parser<'a> {
+    pub fn parse_label_statement(&mut self, label: String) -> StatementNode {
+        // Optional semicolon
+        let _ = self.check_next(Token::Semicolon);
+        StatementNode::Label(label)
+    }
+
+    pub fn parse_goto_statement(&mut self) -> Option<StatementNode> {
+        let label = if let Some(&Token::Identifier(ref name)) = self.next() {
+            name.clone()
+        } else {
+            self.errors
+                .push("Expected label name after 'goto' keyword".into());
+            return None;
+        };
+
+        // Optional semicolon
+        let _ = self.check_next(Token::Semicolon);
+
+        Some(StatementNode::Goto(label))
+    }
+
     pub fn parse_do_block(&mut self) -> Option<StatementNode> {
         let body = self.parse_block_until(&[Token::End]);
 
@@ -298,6 +319,18 @@ impl<'a> Parser<'a> {
                     self.next();
                     self.parse_if_statement();
                 }
+                Token::Label(ref name) => {
+                    let label = name.clone();
+                    self.next();
+                    let stmt = self.parse_label_statement(label);
+                    stmts.push(ASTNode::Statement(stmt));
+                }
+                Token::Goto => {
+                    self.next();
+                    if let Some(stmt) = self.parse_goto_statement() {
+                        stmts.push(ASTNode::Statement(stmt));
+                    }
+                }
                 _ => {
                     self.next();
                 }
@@ -309,16 +342,29 @@ impl<'a> Parser<'a> {
     pub(super) fn parse_local_assignment(&mut self) -> Option<StatementNode> {
         let mut targets = Vec::new();
         loop {
-            match self.next() {
-                Some(Token::Identifier(name)) => {
-                    targets.push(ExpressionNode::Variable(name.clone()))
-                }
+            let var_name = match self.next() {
+                Some(Token::Identifier(name)) => ExpressionNode::Variable(name.clone()),
                 _ => {
                     self.errors
                         .push("Expected identifier in local declaration".into());
                     return None;
                 }
-            }
+            };
+
+            // Check for attribute: <const> or <close>
+            let attribute = if let Some(Token::Attribute(attr)) = self.peek() {
+                if attr == "const" || attr == "close" {
+                    let attr_clone = attr.clone();
+                    self.next();
+                    Some(attr_clone)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            targets.push((var_name, attribute));
 
             if !self.check_next(Token::Comma) {
                 break;
@@ -424,6 +470,7 @@ impl<'a> Parser<'a> {
                     break;
                 }
             }
+
             if !self.check_next(Token::Assign) {
                 self.errors.push("Expected '=' in assignment".into());
                 return None;

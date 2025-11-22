@@ -127,6 +127,11 @@ pub enum Token {
     })]
     Attribute(String),
 
+    #[regex(r"::[a-zA-Z_][a-zA-Z0-9_]*::", |lex| {
+        lex.slice()[2..lex.slice().len()-2].to_string()
+    })]
+    Label(String),
+
     // Identifiers
     #[regex(r"[a-zA-Z_][a-zA-Z0-9_]*", |lex| lex.slice().to_string())]
     Identifier(String),

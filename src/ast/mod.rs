@@ -9,18 +9,19 @@ pub enum ASTNode {
 #[derive(Clone, Debug, PartialEq)]
 pub enum StatementNode {
     Block(Vec<ASTNode>),
-
+    Goto(String),
     DoBlock {
         body: Vec<ASTNode>,
     },
     LocalAssignment {
-        targets: Vec<ExpressionNode>,
+        targets: Vec<(ExpressionNode, Option<String>)>,
         values: Vec<ExpressionNode>,
     },
     Assignment {
         targets: Vec<ExpressionNode>,
         values: Vec<ExpressionNode>,
     },
+    Label(String),
     LocalFunctionDeclaration {
         name: String,
         parameters: Vec<String>,

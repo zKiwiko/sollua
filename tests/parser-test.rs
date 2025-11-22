@@ -215,4 +215,27 @@ mod tests {
         );
         assert_eq!(ast.len(), 1, "Expected 1 AST node, found {}", ast.len());
     }
+
+    #[test]
+    fn test_goto_statement() {
+        let source = "::start:: print('Hello'); goto start;";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(
+            ast.len(),
+            3,
+            "Expected 3 AST nodes (label, statement, goto), found {}",
+            ast.len()
+        );
+    }
 }

@@ -162,6 +162,18 @@ impl<'a> Parser<'a> {
                         self.ast.push(ASTNode::Statement(stmt));
                     }
                 }
+                Token::Goto => {
+                    self.next();
+                    if let Some(stmt) = self.parse_goto_statement() {
+                        self.ast.push(ASTNode::Statement(stmt));
+                    }
+                }
+                Token::Label(ref name) => {
+                    let label = name.clone();
+                    self.next();
+                    let stmt = self.parse_label_statement(label);
+                    self.ast.push(ASTNode::Statement(stmt));
+                }
                 _ => {
                     self.next();
                 }

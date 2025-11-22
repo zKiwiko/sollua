@@ -188,4 +188,14 @@ that spans multiple lines
 
         assert_eq!(tokens[0], Token::Eof);
     }
+
+    #[test]
+    fn test_labels() {
+        let source = "::start:: local x = 10; ::end::";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+
+        assert_eq!(tokens.contains(&Token::Label("start".to_string())), true);
+        assert_eq!(tokens.contains(&Token::Label("end".to_string())), true);
+    }
 }
