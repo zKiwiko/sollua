@@ -4,7 +4,6 @@ use crate::parser::Parser;
 
 impl<'src> Parser<'src> {
     pub fn parse_label_statement(&mut self, label: &'src str) -> StatementNode<'src> {
-        // Optional semicolon
         let _ = self.check_next(Token::Semicolon);
         StatementNode::Label(label)
     }
@@ -18,7 +17,6 @@ impl<'src> Parser<'src> {
             return None;
         };
 
-        // Optional semicolon
         let _ = self.check_next(Token::Semicolon);
 
         Some(StatementNode::Goto(label))
@@ -57,7 +55,6 @@ impl<'src> Parser<'src> {
     }
 
     pub fn parse_for_statement(&mut self) -> Option<StatementNode<'src>> {
-        // Parse first variable name
         let first_var = if let Some(&Token::Identifier(ref name)) = self.next() {
             *name
         } else {
@@ -66,18 +63,14 @@ impl<'src> Parser<'src> {
             return None;
         };
 
-        // Check if it's numeric for (=) or generic for (,/in)
         if self.check_next(Token::Assign) {
-            // Numeric for: for var = start, end [, step] do ... end
             return self.parse_numeric_for(first_var);
         } else {
-            // Generic for: for var1, var2, ... in exp1, exp2, ... do ... end
             return self.parse_generic_for(first_var);
         }
     }
 
     fn parse_numeric_for(&mut self, var_name: &'src str) -> Option<StatementNode<'src>> {
-        // Parse start expression
         let start_expr = match self.parse_expression(1) {
             Some(expr) => expr,
             None => {
@@ -87,14 +80,12 @@ impl<'src> Parser<'src> {
             }
         };
 
-        // Expect ','
         if !self.check_next(Token::Comma) {
             self.errors
                 .push("Expected ',' after start expression in 'for' statement".into());
             return None;
         }
 
-        // Parse end expression
         let end_expr = match self.parse_expression(1) {
             Some(expr) => expr,
             None => {
@@ -104,7 +95,6 @@ impl<'src> Parser<'src> {
             }
         };
 
-        // Optional step expression
         let step_expr = if self.check_next(Token::Comma) {
             match self.parse_expression(1) {
                 Some(expr) => Some(expr),
@@ -118,16 +108,13 @@ impl<'src> Parser<'src> {
             None
         };
 
-        // Expect 'do'
         if !self.check_next(Token::Do) {
             self.errors.push("Expected 'do' in 'for' statement".into());
             return None;
         }
 
-        // Parse body
         let body = self.parse_block_until(&[Token::End]);
 
-        // Expect 'end'
         if !self.check_next(Token::End) {
             self.errors
                 .push("Expected 'end' to close 'for' statement".into());
@@ -144,7 +131,6 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_generic_for(&mut self, first_var: &'src str) -> Option<StatementNode<'src>> {
-        // Collect all variable names: var1, var2, ...
         let mut variables = vec![first_var];
         while self.check_next(Token::Comma) {
             if let Some(&Token::Identifier(ref name)) = self.next() {
@@ -155,26 +141,21 @@ impl<'src> Parser<'src> {
             }
         }
 
-        // Expect 'in'
         if !self.check_next(Token::In) {
             self.errors
                 .push("Expected 'in' in generic 'for' loop".into());
             return None;
         }
 
-        // Parse expression list
         let expressions = self.parse_expression_list()?;
 
-        // Expect 'do'
         if !self.check_next(Token::Do) {
             self.errors.push("Expected 'do' in 'for' statement".into());
             return None;
         }
 
-        // Parse body
         let body = self.parse_block_until(&[Token::End]);
 
-        // Expect 'end'
         if !self.check_next(Token::End) {
             self.errors
                 .push("Expected 'end' to close 'for' statement".into());
@@ -230,7 +211,6 @@ impl<'src> Parser<'src> {
         let then_block = self.parse_block_until(&[Token::ElseIf, Token::Else, Token::End]);
         let mut else_block = Vec::new();
 
-        // Handle elseif chain as nested If nodes in else_block
         while matches!(self.peek(), Some(Token::ElseIf)) {
             self.next();
             let elseif_cond = match self.parse_expression(1) {
@@ -254,7 +234,6 @@ impl<'src> Parser<'src> {
             }));
         }
 
-        // Handle final else
         if matches!(self.peek(), Some(Token::Else)) {
             self.next();
             else_block = self.parse_block_until(&[Token::End]);
@@ -262,8 +241,10 @@ impl<'src> Parser<'src> {
 
         if !self.check_next(Token::End) {
             let peek_tok = self.peek().cloned();
-            self.errors
-                .push(format!("Expected 'end' to close 'if' statement, found {:?}", peek_tok));
+            self.errors.push(format!(
+                "Expected 'end' to close 'if' statement, found {:?}",
+                peek_tok
+            ));
             return None;
         }
 
@@ -274,12 +255,15 @@ impl<'src> Parser<'src> {
         })
     }
 
-    // Helper to parse statements until hitting one of the stop tokens
     pub(super) fn parse_block_until(&mut self, stop_tokens: &[Token<'src>]) -> Vec<ASTNode<'src>> {
         let mut stmts = Vec::new();
         loop {
             let token = match self.peek() {
-                Some(t) if super::helpers::matches_any(t, stop_tokens) || matches!(t, Token::Eof) => break,
+                Some(t)
+                    if super::helpers::matches_any(t, stop_tokens) || matches!(t, Token::Eof) =>
+                {
+                    break;
+                }
                 Some(t) => t.clone(),
                 None => break,
             };
@@ -350,7 +334,6 @@ impl<'src> Parser<'src> {
                 }
             };
 
-            // Check for attribute: <const> or <close>
             let attribute = if let Some(Token::Attribute(attr)) = self.peek() {
                 if attr == &"const" || attr == &"close" {
                     let attr_val = *attr;
@@ -385,14 +368,12 @@ impl<'src> Parser<'src> {
             }
         }
 
-        // Optional semicolon
         let _ = self.check_next(Token::Semicolon);
 
         Some(StatementNode::LocalAssignment { targets, values })
     }
 
     pub fn parse_function_decl(&mut self, is_local: bool) -> Option<StatementNode<'src>> {
-        // Expect function name
         let first_name = if let Some(&Token::Identifier(ref name)) = self.next() {
             *name
         } else {
@@ -401,9 +382,7 @@ impl<'src> Parser<'src> {
             return None;
         };
 
-        // For local functions, name_path is just [name]
         if is_local {
-            // Expect '('
             if !self.check_next(Token::LeftParen) {
                 self.errors
                     .push("Expected '(' after function name".to_string());
@@ -427,7 +406,6 @@ impl<'src> Parser<'src> {
             });
         }
 
-        // For global functions, parse name path: name.name.name[:name]
         let mut name_path = vec![first_name];
         let mut is_method = false;
 
@@ -453,7 +431,6 @@ impl<'src> Parser<'src> {
             }
         }
 
-        // Expect '('
         if !self.check_next(Token::LeftParen) {
             self.errors
                 .push("Expected '(' after function name".to_string());
@@ -462,7 +439,6 @@ impl<'src> Parser<'src> {
 
         let mut parameters = self.parse_parameter_list()?;
 
-        // If method syntax, prepend 'self' to parameters
         if is_method {
             parameters.insert(0, "self");
         }
@@ -497,7 +473,7 @@ impl<'src> Parser<'src> {
                 &Token::VarArgs => {
                     parameters.push("...");
                     self.next();
-                    break; // varargs must be last
+                    break;
                 }
                 &Token::RightParen => break,
                 _ => {
@@ -510,13 +486,13 @@ impl<'src> Parser<'src> {
         Some(parameters)
     }
 
-    pub(super) fn parse_identifier_statement(&mut self, first: &'src str) -> Option<StatementNode<'src>> {
-        // Try to parse as full expression with postfix (function call, indexing)
+    pub(super) fn parse_identifier_statement(
+        &mut self,
+        first: &'src str,
+    ) -> Option<StatementNode<'src>> {
         let expr = self.parse_postfix(ExpressionNode::Variable(first))?;
 
-        // Check if it's an assignment or expression statement
         if self.check_next(Token::Comma) {
-            // Multiple assignment targets: x, y = ...
             let mut targets = vec![expr];
             loop {
                 if let Some(e) = self.parse_postfix_expression() {
@@ -537,7 +513,6 @@ impl<'src> Parser<'src> {
             let _ = self.check_next(Token::Semicolon);
             return Some(StatementNode::Assignment { targets, values });
         } else if self.check_next(Token::Assign) {
-            // Single assignment: x = ...
             let values = self.parse_expression_list()?;
             let _ = self.check_next(Token::Semicolon);
             return Some(StatementNode::Assignment {
@@ -545,7 +520,6 @@ impl<'src> Parser<'src> {
                 values,
             });
         } else {
-            // Expression statement (function call)
             let _ = self.check_next(Token::Semicolon);
             return Some(StatementNode::ExpressionStatement(expr));
         }
@@ -554,7 +528,6 @@ impl<'src> Parser<'src> {
     pub(super) fn parse_block(&mut self) -> Vec<ASTNode<'src>> {
         let mut stmts = Vec::new();
         loop {
-            // Check for end or extract identifier first if needed
             let token_kind = match self.peek() {
                 Some(Token::End) => {
                     self.next();
@@ -571,7 +544,7 @@ impl<'src> Parser<'src> {
                 Some(token) => token.clone(),
                 None => break,
             };
-            
+
             match token_kind {
                 Token::Return => {
                     self.next();

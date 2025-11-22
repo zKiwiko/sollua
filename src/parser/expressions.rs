@@ -92,11 +92,13 @@ impl<'src> Parser<'src> {
     }
 
     #[inline(always)]
-    pub(super) fn parse_postfix(&mut self, mut base: ExpressionNode<'src>) -> Option<ExpressionNode<'src>> {
+    pub(super) fn parse_postfix(
+        &mut self,
+        mut base: ExpressionNode<'src>,
+    ) -> Option<ExpressionNode<'src>> {
         loop {
             match self.peek()? {
                 Token::LeftParen => {
-                    // Regular function call: func(args)
                     self.next();
                     let arguments = if matches!(self.peek(), Some(Token::RightParen)) {
                         Vec::new()
@@ -114,7 +116,6 @@ impl<'src> Parser<'src> {
                     };
                 }
                 Token::Colon => {
-                    // Method call: obj:method(args)
                     self.next();
                     let method = if let Some(Token::Identifier(name)) = self.next() {
                         *name
@@ -123,7 +124,6 @@ impl<'src> Parser<'src> {
                         return None;
                     };
 
-                    // Parse arguments - can be (), table, or string
                     let arguments = if self.check_next(Token::LeftParen) {
                         let args = if matches!(self.peek(), Some(Token::RightParen)) {
                             Vec::new()
@@ -136,11 +136,9 @@ impl<'src> Parser<'src> {
                         }
                         args
                     } else if matches!(self.peek(), Some(Token::LeftBrace)) {
-                        // Table constructor as argument
-                        self.next(); // consume {
+                        self.next();
                         vec![self.parse_table_constructor()?]
                     } else if let Some(Token::StringLiteral(s)) = self.peek() {
-                        // String literal as argument
                         let s = *s;
                         self.next();
                         vec![ExpressionNode::Literal(LiteralNode::String(s))]
@@ -157,8 +155,7 @@ impl<'src> Parser<'src> {
                     };
                 }
                 Token::LeftBrace => {
-                    // Table constructor as function argument: func{...}
-                    self.next(); // consume {
+                    self.next();
                     let table = self.parse_table_constructor()?;
                     base = ExpressionNode::FunctionCall {
                         function: Box::new(base),
@@ -167,7 +164,6 @@ impl<'src> Parser<'src> {
                     };
                 }
                 Token::StringLiteral(s) => {
-                    // String literal as function argument: func"..."
                     let s = *s;
                     self.next();
                     base = ExpressionNode::FunctionCall {
@@ -177,7 +173,6 @@ impl<'src> Parser<'src> {
                     };
                 }
                 Token::LeftBracket => {
-                    // Index with brackets: t[key]
                     self.next();
                     let index = self.parse_expression(1)?;
                     if !self.check_next(Token::RightBracket) {
@@ -190,7 +185,6 @@ impl<'src> Parser<'src> {
                     };
                 }
                 Token::Dot => {
-                    // Index with dot: t.key
                     self.next();
                     if let Some(Token::Identifier(key)) = self.next() {
                         let key_expr = ExpressionNode::Literal(LiteralNode::String(key));
@@ -218,7 +212,6 @@ impl<'src> Parser<'src> {
                     break;
                 }
                 Token::LeftBracket => {
-                    // [key] = value
                     self.next();
                     let key = self.parse_expression(1)?;
                     if !self.check_next(Token::RightBracket) {
@@ -233,19 +226,15 @@ impl<'src> Parser<'src> {
                     entries.push((Some(key), value));
                 }
                 Token::Identifier(_) => {
-                    // Could be key = value or just value
                     let start_expr = self.parse_expression(1)?;
                     if self.check_next(Token::Assign) {
-                        // It was a key
                         let value = self.parse_expression(1)?;
                         entries.push((Some(start_expr), value));
                     } else {
-                        // It was just a value (array-style entry)
                         entries.push((None, start_expr));
                     }
                 }
                 _ => {
-                    // Expression value (array-style)
                     let value = self.parse_expression(1)?;
                     entries.push((None, value));
                 }
@@ -263,14 +252,12 @@ impl<'src> Parser<'src> {
 
     #[inline(always)]
     fn parse_anonymous_function(&mut self) -> Option<ExpressionNode<'src>> {
-        // Expect '('
         if !self.check_next(Token::LeftParen) {
             self.errors
                 .push("Expected '(' after 'function' keyword".into());
             return None;
         }
 
-        // Parse parameters
         let mut parameters = Vec::new();
         while let Some(token) = self.peek() {
             match token {
