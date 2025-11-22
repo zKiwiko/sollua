@@ -27,3 +27,76 @@ The files used in each test are in the `lua` directory of the repository.
 | **sollua** |          9 ms           |         19.2 ms          |         33.2 ms          |
 | luaparse   |         44.6 ms         |          125 ms          |          246 ms          |
 | full_moon  |          48 ms          |          137 ms          |           246            |
+
+## Usage
+
+### Installation
+
+```bash
+cargo add sollua
+```
+
+### Implementation Example
+
+```rust
+use sollua::lexer::Lexer;
+use sollua::parser::Parser;
+
+fn main() {
+    let source = "function add(a, b) return a + b end";
+
+    let mut tokens = Lexer::new(source).collect();
+    let mut parser = parser::new(source, &tokens);
+    let ast = parser.parse();
+
+    println!("AST: \n{:?}", ast);
+
+    if parser.errors.len() > 0 {
+        for error in &parser.errors {
+            println!("Parser error: {:?}", error);
+        }
+    }
+}
+
+```
+
+**Expected Output**:
+
+```
+AST:
+[
+    Statement(
+        FunctionDeclaration {
+            name_path: [
+                "add",
+            ],
+            is_method: false,
+            parameters: [
+                "a",
+                "b",
+            ],
+            body: Statement(
+                Block(
+                    [
+                        Statement(
+                            Return(
+                                [
+                                    BinaryOp {
+                                        left: Variable(
+                                            "a",
+                                        ),
+                                        operator: Plus,
+                                        right: Variable(
+                                            "b",
+                                        ),
+                                    },
+                                ],
+                            ),
+                        ),
+                    ],
+                ),
+            ),
+        },
+    ),
+]
+```

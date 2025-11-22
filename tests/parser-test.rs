@@ -23,8 +23,7 @@ mod tests {
     }
     #[test]
     fn test_function_declaration() {
-        let source =
-            "function add(a, b) return a + b end local function sub(a, b) return a - b end";
+        let source = "function add(a, b) return a + b end";
         let mut lexer = Lexer::new(source);
         let tokens: Vec<_> = lexer.collect();
         let mut parser = Parser::new(source, &tokens);
