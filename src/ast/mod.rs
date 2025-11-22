@@ -10,6 +10,9 @@ pub enum ASTNode {
 pub enum StatementNode {
     Block(Vec<ASTNode>),
 
+    DoBlock {
+        body: Vec<ASTNode>,
+    },
     LocalAssignment {
         targets: Vec<ExpressionNode>,
         values: Vec<ExpressionNode>,
@@ -41,11 +44,16 @@ pub enum StatementNode {
         body: Vec<ASTNode>,
         condition: ExpressionNode,
     },
-    For {
+    ForNumeric {
         variable: String,
         start: ExpressionNode,
         end: ExpressionNode,
         step: Option<ExpressionNode>,
+        body: Vec<ASTNode>,
+    },
+    ForGeneric {
+        variables: Vec<String>,
+        expressions: Vec<ExpressionNode>,
         body: Vec<ASTNode>,
     },
     Return(Vec<ExpressionNode>),

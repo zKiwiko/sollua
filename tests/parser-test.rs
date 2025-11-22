@@ -126,4 +126,93 @@ mod tests {
             parser.errors
         );
     }
+
+    #[test]
+    fn test_while_loop() {
+        let source = "while n > 0 do n = n - 1; end";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+    }
+
+    #[test]
+    fn test_for_loop() {
+        let source = "for i = 1, 10 do print(i); end";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(ast.len(), 1, "Expected 1 AST node, found {}", ast.len());
+    }
+
+    #[test]
+    fn test_generic_for_loop() {
+        let source = "for k, v in pairs(t) do print(k, v); end";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(ast.len(), 1, "Expected 1 AST node, found {}", ast.len());
+    }
+
+    #[test]
+    fn test_repeat_until_loop() {
+        let source = "repeat x = x + 1; until x >= 10;";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(ast.len(), 1, "Expected 1 AST node, found {}", ast.len());
+    }
+
+    #[test]
+    fn test_do_block() {
+        let source = "do local x = 10; print(x); end";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(ast.len(), 1, "Expected 1 AST node, found {}", ast.len());
+    }
 }
