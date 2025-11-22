@@ -1,7 +1,5 @@
 use logos::{Lexer as LogosLexer, Logos};
 
-mod helpers;
-
 #[derive(Logos, Debug, PartialEq, Clone)]
 #[logos(skip r"[ \t\n\f]+")]
 pub enum Token<'src> {
