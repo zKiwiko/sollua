@@ -186,6 +186,6 @@ that spans multiple lines
         let mut lexer = Lexer::new(source);
         let tokens: Vec<_> = lexer.collect();
 
-        assert_eq!(tokens.is_empty(), true);
+        assert_eq!(tokens[0], Token::Eof);
     }
 }

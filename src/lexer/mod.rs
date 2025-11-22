@@ -3,7 +3,7 @@ use logos::{Lexer as LogosLexer, Logos};
 mod helpers;
 use helpers::unescape;
 
-#[derive(Logos, Debug, PartialEq)]
+#[derive(Logos, Debug, PartialEq, Clone)]
 #[logos(skip r"[ \t\n\f]+")]
 pub enum Token {
     // Keywords
@@ -173,6 +173,8 @@ pub enum Token {
 
     #[regex(r"--\[\[([^\]]|\][^\]])*\]\]", logos::skip)]
     BlockComment,
+
+    Eof,
 }
 
 pub struct Lexer<'source> {
@@ -187,6 +189,8 @@ impl<'source> Lexer<'source> {
     }
 
     pub fn collect(&mut self) -> Vec<Token> {
-        self.tokenizer.by_ref().filter_map(|res| res.ok()).collect()
+        let mut tokens: Vec<Token> = self.tokenizer.by_ref().filter_map(|res| res.ok()).collect();
+        tokens.push(Token::Eof);
+        tokens
     }
 }
