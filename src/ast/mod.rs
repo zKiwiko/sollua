@@ -28,7 +28,8 @@ pub enum StatementNode {
         body: Box<ASTNode>,
     },
     FunctionDeclaration {
-        name: String,
+        name_path: Vec<String>,
+        is_method: bool,
         parameters: Vec<String>,
         body: Box<ASTNode>,
     },
@@ -78,6 +79,7 @@ pub enum ExpressionNode {
     },
     FunctionCall {
         function: Box<ExpressionNode>,
+        method: Option<String>,
         arguments: Vec<ExpressionNode>,
     },
     TableConstructor {
@@ -87,6 +89,11 @@ pub enum ExpressionNode {
         table: Box<ExpressionNode>,
         index: Box<ExpressionNode>,
     },
+    AnonymousFunction {
+        parameters: Vec<String>,
+        body: Box<ASTNode>,
+    },
+    VarArg,
 }
 
 #[derive(Clone, Debug, PartialEq)]

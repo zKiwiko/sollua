@@ -394,13 +394,65 @@ impl<'a> Parser<'a> {
 
     pub fn parse_function_decl(&mut self, is_local: bool) -> Option<StatementNode> {
         // Expect function name
-        let name = if let Some(&Token::Identifier(ref name)) = self.next() {
+        let first_name = if let Some(&Token::Identifier(ref name)) = self.next() {
             name.clone()
         } else {
             self.errors
                 .push("Expected function name after 'function' keyword".to_string());
             return None;
         };
+
+        // For local functions, name_path is just [name]
+        if is_local {
+            // Expect '('
+            if !self.check_next(Token::LeftParen) {
+                self.errors
+                    .push("Expected '(' after function name".to_string());
+                return None;
+            }
+
+            let parameters = self.parse_parameter_list()?;
+
+            if !self.check_next(Token::RightParen) {
+                self.errors
+                    .push("Expected ')' after parameter list".to_string());
+                return None;
+            }
+
+            let body_stmts = self.parse_block();
+            let body = ASTNode::Statement(StatementNode::Block(body_stmts));
+            return Some(StatementNode::LocalFunctionDeclaration {
+                name: first_name,
+                parameters,
+                body: Box::new(body),
+            });
+        }
+
+        // For global functions, parse name path: name.name.name[:name]
+        let mut name_path = vec![first_name];
+        let mut is_method = false;
+
+        loop {
+            if self.check_next(Token::Dot) {
+                if let Some(&Token::Identifier(ref name)) = self.next() {
+                    name_path.push(name.clone());
+                } else {
+                    self.errors.push("Expected identifier after '.'".into());
+                    return None;
+                }
+            } else if self.check_next(Token::Colon) {
+                if let Some(&Token::Identifier(ref name)) = self.next() {
+                    name_path.push(name.clone());
+                    is_method = true;
+                    break;
+                } else {
+                    self.errors.push("Expected identifier after ':'".into());
+                    return None;
+                }
+            } else {
+                break;
+            }
+        }
 
         // Expect '('
         if !self.check_next(Token::LeftParen) {
@@ -409,16 +461,44 @@ impl<'a> Parser<'a> {
             return None;
         }
 
-        // Parse parameters
+        let mut parameters = self.parse_parameter_list()?;
+
+        // If method syntax, prepend 'self' to parameters
+        if is_method {
+            parameters.insert(0, "self".to_string());
+        }
+
+        if !self.check_next(Token::RightParen) {
+            self.errors
+                .push("Expected ')' after parameter list".to_string());
+            return None;
+        }
+
+        let body_stmts = self.parse_block();
+        let body = ASTNode::Statement(StatementNode::Block(body_stmts));
+        Some(StatementNode::FunctionDeclaration {
+            name_path,
+            is_method,
+            parameters,
+            body: Box::new(body),
+        })
+    }
+
+    fn parse_parameter_list(&mut self) -> Option<Vec<String>> {
         let mut parameters = Vec::new();
         while let Some(token) = self.peek() {
             match token {
                 &Token::Identifier(ref param) => {
                     parameters.push(param.clone());
-                    self.next(); // Consume parameter
+                    self.next();
                     if !self.check_next(Token::Comma) {
                         break;
                     }
+                }
+                &Token::VarArgs => {
+                    parameters.push("...".to_string());
+                    self.next();
+                    break; // varargs must be last
                 }
                 &Token::RightParen => break,
                 _ => {
@@ -428,28 +508,7 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-
-        // Expect ')'
-        if !self.check_next(Token::RightParen) {
-            self.errors
-                .push("Expected ')' after parameter list".to_string());
-            return None;
-        }
-
-        let body_stmts = self.parse_block();
-        let body = ASTNode::Statement(StatementNode::Block(body_stmts));
-        if is_local {
-            return Some(StatementNode::LocalFunctionDeclaration {
-                name,
-                parameters,
-                body: Box::new(body),
-            });
-        }
-        Some(StatementNode::FunctionDeclaration {
-            name,
-            parameters,
-            body: Box::new(body),
-        })
+        Some(parameters)
     }
 
     pub(super) fn parse_identifier_statement(&mut self, first: String) -> Option<StatementNode> {

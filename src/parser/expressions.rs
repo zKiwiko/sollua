@@ -51,6 +51,8 @@ impl<'a> Parser<'a> {
             Token::True => ExpressionNode::Literal(LiteralNode::Boolean(true)),
             Token::False => ExpressionNode::Literal(LiteralNode::Boolean(false)),
             Token::Nil => ExpressionNode::Literal(LiteralNode::Nil),
+            Token::VarArgs => ExpressionNode::VarArg,
+            Token::Function => return self.parse_anonymous_function(),
             Token::LeftParen => {
                 let expr = self.parse_expression(1)?;
                 if !self.check_next(Token::RightParen) {
@@ -89,7 +91,7 @@ impl<'a> Parser<'a> {
         loop {
             match self.peek()? {
                 Token::LeftParen => {
-                    // Function call
+                    // Regular function call: func(args)
                     self.next();
                     let arguments = if matches!(self.peek(), Some(Token::RightParen)) {
                         Vec::new()
@@ -102,8 +104,73 @@ impl<'a> Parser<'a> {
                     }
                     base = ExpressionNode::FunctionCall {
                         function: Box::new(base),
+                        method: None,
                         arguments,
                     };
+                }
+                Token::Colon => {
+                    // Method call: obj:method(args)
+                    self.next();
+                    let method = if let Some(Token::Identifier(name)) = self.next() {
+                        name.clone()
+                    } else {
+                        self.errors.push("Expected method name after ':'".into());
+                        return None;
+                    };
+
+                    // Parse arguments - can be (), table, or string
+                    let arguments = if self.check_next(Token::LeftParen) {
+                        let args = if matches!(self.peek(), Some(Token::RightParen)) {
+                            Vec::new()
+                        } else {
+                            self.parse_expression_list()?
+                        };
+                        if !self.check_next(Token::RightParen) {
+                            self.errors.push("Expected ')' after arguments".into());
+                            return None;
+                        }
+                        args
+                    } else if matches!(self.peek(), Some(Token::LeftBrace)) {
+                        // Table constructor as argument
+                        self.next(); // Consume {
+                        vec![self.parse_table_constructor()?]
+                    } else if let Some(Token::StringLiteral(s)) = self.peek() {
+                        // String literal as argument
+                        let s = s.clone();
+                        self.next();
+                        vec![ExpressionNode::Literal(LiteralNode::String(s))]
+                    } else {
+                        self.errors
+                            .push("Expected arguments after method name".into());
+                        return None;
+                    };
+
+                    base = ExpressionNode::FunctionCall {
+                        function: Box::new(base),
+                        method: Some(method),
+                        arguments,
+                    };
+                }
+                Token::LeftBrace => {
+                    // Table constructor as function argument: func{...}
+                    self.next(); // Consume {
+                    let table = self.parse_table_constructor()?;
+                    base = ExpressionNode::FunctionCall {
+                        function: Box::new(base),
+                        method: None,
+                        arguments: vec![table],
+                    };
+                }
+                Token::StringLiteral(_) => {
+                    // String literal as function argument: func"..."
+                    if let Some(Token::StringLiteral(s)) = self.next() {
+                        let s = s.clone();
+                        base = ExpressionNode::FunctionCall {
+                            function: Box::new(base),
+                            method: None,
+                            arguments: vec![ExpressionNode::Literal(LiteralNode::String(s))],
+                        };
+                    }
                 }
                 Token::LeftBracket => {
                     // Index with brackets: t[key]
@@ -137,7 +204,6 @@ impl<'a> Parser<'a> {
         }
         Some(base)
     }
-
     fn parse_table_constructor(&mut self) -> Option<ExpressionNode> {
         let mut entries = Vec::new();
         loop {
@@ -188,5 +254,52 @@ impl<'a> Parser<'a> {
             }
         }
         Some(ExpressionNode::TableConstructor { entries })
+    }
+
+    fn parse_anonymous_function(&mut self) -> Option<ExpressionNode> {
+        // Expect '('
+        if !self.check_next(Token::LeftParen) {
+            self.errors
+                .push("Expected '(' after 'function' keyword".into());
+            return None;
+        }
+
+        // Parse parameters
+        let mut parameters = Vec::new();
+        while let Some(token) = self.peek() {
+            match token {
+                &Token::Identifier(ref param) => {
+                    parameters.push(param.clone());
+                    self.next();
+                    if !self.check_next(Token::Comma) {
+                        break;
+                    }
+                }
+                &Token::VarArgs => {
+                    parameters.push("...".to_string());
+                    self.next();
+                    break;
+                }
+                &Token::RightParen => break,
+                _ => {
+                    self.errors
+                        .push("Unexpected token in parameter list".into());
+                    return None;
+                }
+            }
+        }
+
+        if !self.check_next(Token::RightParen) {
+            self.errors.push("Expected ')' after parameter list".into());
+            return None;
+        }
+
+        let body_stmts = self.parse_block();
+        let body = ASTNode::Statement(StatementNode::Block(body_stmts));
+
+        Some(ExpressionNode::AnonymousFunction {
+            parameters,
+            body: Box::new(body),
+        })
     }
 }

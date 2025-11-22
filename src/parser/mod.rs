@@ -174,6 +174,10 @@ impl<'a> Parser<'a> {
                     let stmt = self.parse_label_statement(label);
                     self.ast.push(ASTNode::Statement(stmt));
                 }
+                Token::Semicolon => {
+                    // Empty statement
+                    self.next();
+                }
                 _ => {
                     self.next();
                 }

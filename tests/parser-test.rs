@@ -238,4 +238,131 @@ mod tests {
             ast.len()
         );
     }
+
+    #[test]
+    fn test_method_declaration() {
+        let source = "function MyClass.new() return {} end function MyClass:method(x) return self.field + x end";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(ast.len(), 2);
+    }
+
+    #[test]
+    fn test_method_call() {
+        let source = "obj:method(1, 2); str:upper();";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(ast.len(), 2);
+    }
+
+    #[test]
+    fn test_alternative_call_syntax() {
+        let source = "print \"hello\"; require 'module';";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(ast.len(), 2);
+    }
+
+    #[test]
+    fn test_table_call_syntax() {
+        let source = "config {debug=true};";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(ast.len(), 1);
+    }
+
+    #[test]
+    fn test_anonymous_function() {
+        let source =
+            "local f = function(x, y) return x + y end; local g = function(...) return ... end;";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(ast.len(), 2);
+    }
+
+    #[test]
+    fn test_varargs() {
+        let source = "function f(...) print(...) end; local function g(a, ...) return a, ... end;";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(ast.len(), 2);
+    }
+
+    #[test]
+    fn test_empty_statements() {
+        let source = ";;; x = 1; ; y = 2;;";
+        let mut lexer = Lexer::new(source);
+        let tokens: Vec<_> = lexer.collect();
+        let mut parser = Parser::new(source, &tokens);
+        let ast = parser.parse().clone();
+
+        println!("AST: \n{:#?}", ast);
+
+        assert!(
+            parser.errors.is_empty(),
+            "Parser errors: {:?}",
+            parser.errors
+        );
+        assert_eq!(ast.len(), 2); // Only x=1 and y=2
+    }
 }
