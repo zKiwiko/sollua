@@ -86,20 +86,18 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn new(source: &'a str, tokens: &'a [Token]) -> Self {
-        Parser {
+        let mut parser = Parser {
             tokens: tokens.iter().peekable(),
             _source: source,
             errors: Vec::new(),
             ast: Vec::new(),
-        }
+        };
+        parser.ast.reserve(tokens.len() / 4 + 16);
+        parser
     }
 
     pub fn parse(&mut self) -> &Vec<ASTNode> {
-        loop {
-            let token = match self.peek() {
-                Some(t) => t.clone(),
-                None => break,
-            };
+        while let Some(token) = self.peek().cloned() {
             match token {
                 Token::Eof => {
                     self.next();
@@ -127,10 +125,9 @@ impl<'a> Parser<'a> {
                         self.ast.push(ASTNode::Statement(stmt));
                     }
                 }
-                Token::Identifier(ref name) => {
+                Token::Identifier(name) => {
                     self.next();
-                    let ident = name.clone();
-                    if let Some(stmt) = self.parse_identifier_statement(ident) {
+                    if let Some(stmt) = self.parse_identifier_statement(name.clone()) {
                         self.ast.push(ASTNode::Statement(stmt));
                     }
                 }
@@ -168,14 +165,13 @@ impl<'a> Parser<'a> {
                         self.ast.push(ASTNode::Statement(stmt));
                     }
                 }
-                Token::Label(ref name) => {
+                Token::Label(name) => {
                     let label = name.clone();
                     self.next();
                     let stmt = self.parse_label_statement(label);
                     self.ast.push(ASTNode::Statement(stmt));
                 }
                 Token::Semicolon => {
-                    // Empty statement
                     self.next();
                 }
                 _ => {

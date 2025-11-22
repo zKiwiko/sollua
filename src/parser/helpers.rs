@@ -23,6 +23,7 @@ impl<'a> Parser<'a> {
         false
     }
 
+    #[inline(always)]
     pub(super) fn is_binary_op(token: &Token) -> bool {
         matches!(
             token,
@@ -45,6 +46,7 @@ impl<'a> Parser<'a> {
         )
     }
 
+    #[inline(always)]
     pub(super) fn precedence(token: &Token) -> u8 {
         match token {
             Token::Or => 1,
@@ -63,10 +65,12 @@ impl<'a> Parser<'a> {
         }
     }
 
+    #[inline(always)]
     pub(super) fn right_associative(token: &Token) -> bool {
         matches!(token, Token::Power | Token::Concat)
     }
 
+    #[inline(always)]
     pub(super) fn parse_expression_list(&mut self) -> Option<Vec<crate::ast::ExpressionNode>> {
         let mut values = Vec::new();
         loop {

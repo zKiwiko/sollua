@@ -3,6 +3,7 @@ use crate::lexer::Token;
 use crate::parser::Parser;
 
 impl<'a> Parser<'a> {
+    #[inline(always)]
     pub(super) fn parse_expression(&mut self, min_prec: u8) -> Option<ExpressionNode> {
         let mut left = self.parse_unary()?;
         loop {
@@ -27,6 +28,7 @@ impl<'a> Parser<'a> {
         Some(left)
     }
 
+    #[inline(always)]
     fn parse_unary(&mut self) -> Option<ExpressionNode> {
         if let Some(tok) = self.peek() {
             if matches!(tok, Token::Minus | Token::Not | Token::Length) {
@@ -42,6 +44,7 @@ impl<'a> Parser<'a> {
         self.parse_primary()
     }
 
+    #[inline(always)]
     fn parse_primary(&mut self) -> Option<ExpressionNode> {
         let base = match self.next()? {
             Token::Identifier(name) => ExpressionNode::Variable(name.clone()),
@@ -69,6 +72,7 @@ impl<'a> Parser<'a> {
         self.parse_postfix(base)
     }
 
+    #[inline(always)]
     pub(super) fn parse_postfix_expression(&mut self) -> Option<ExpressionNode> {
         let base = match self.next()? {
             Token::Identifier(name) => ExpressionNode::Variable(name.clone()),
@@ -87,6 +91,7 @@ impl<'a> Parser<'a> {
         self.parse_postfix(base)
     }
 
+    #[inline(always)]
     pub(super) fn parse_postfix(&mut self, mut base: ExpressionNode) -> Option<ExpressionNode> {
         loop {
             match self.peek()? {
@@ -204,6 +209,7 @@ impl<'a> Parser<'a> {
         }
         Some(base)
     }
+    #[inline(always)]
     fn parse_table_constructor(&mut self) -> Option<ExpressionNode> {
         let mut entries = Vec::new();
         loop {
@@ -256,6 +262,7 @@ impl<'a> Parser<'a> {
         Some(ExpressionNode::TableConstructor { entries })
     }
 
+    #[inline(always)]
     fn parse_anonymous_function(&mut self) -> Option<ExpressionNode> {
         // Expect '('
         if !self.check_next(Token::LeftParen) {
